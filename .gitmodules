@@ -1,3 +1,9 @@
 [submodule "architecture.of.internet-product"]
 	path = architecture.of.internet-product
 	url = https://github.com/davideuler/architecture.of.internet-product
+[submodule "ByteCodeTechnology"]
+	path = ByteCodeTechnology
+	url = https://github.com/Guolei1130/ByteCodeTechnology
+[submodule "Native_Hook"]
+	path = Native_Hook
+	url = https://github.com/Guolei1130/Native_Hook

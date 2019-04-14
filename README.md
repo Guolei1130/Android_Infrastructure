@@ -7,8 +7,11 @@ Android中基础架构涉及到的东西也有很多，类似高性能日志、�
 
 我们需要相当多的知识储备。就我目前想到的有以下几点
 
-* native hook
-* AspectJ 
+* Hook技术
+    * native hook，可以看submodule的
+    * java hook
+    * 方法替换
+* 字节码技术，AspectJ、ASM、JavaAssit等技术可以看submodule中的ByteCodeTechnology 
 
 ### 高性能日志
 
