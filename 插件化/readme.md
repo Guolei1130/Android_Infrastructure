@@ -45,25 +45,25 @@ Android P preview版本中，已限制对@hide api的反射调用，具体的原
 
 ```
 public ActivityResult execStartActivity(
-Context who, IBinder contextThread, IBinder token, Activity target,
-Intent intent, int requestCode, Bundle options) {
-List<ResolveInfo> infos = mPackageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL);
-if (infos == null || infos.size() == 0) {
-//没查到，要启动的这个没注册
-intent.putExtra(TARGET_ACTIVITY, intent.getComponent().getClassName());
-intent.setClassName(who, "com.guolei.plugindemo.StubActivity");
-}
+    Context who, IBinder contextThread, IBinder token, Activity target,
+    Intent intent, int requestCode, Bundle options) {
+    List<ResolveInfo> infos = mPackageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL);
+    if (infos == null || infos.size() == 0) {
+        //没查到，要启动的这个没注册
+        intent.putExtra(TARGET_ACTIVITY, intent.getComponent().getClassName());
+        intent.setClassName(who, "com.guolei.plugindemo.StubActivity");
+    }
 
-Class instrumentationClz = Instrumentation.class;
-try {
-Method execMethod = instrumentationClz.getDeclaredMethod("execStartActivity",
-Context.class, IBinder.class, IBinder.class, Activity.class, Intent.class, int.class, Bundle.class);
-return (ActivityResult) execMethod.invoke(mOriginInstrumentation, who, contextThread, token,
-target, intent, requestCode, options);
-} catch (Exception e) {
-e.printStackTrace();
-}
-return null;
+    Class instrumentationClz = Instrumentation.class;
+    try {
+        Method execMethod = instrumentationClz.getDeclaredMethod("execStartActivity",
+        Context.class, IBinder.class, IBinder.class, Activity.class, Intent.class, int.class, Bundle.class);
+        return (ActivityResult) execMethod.invoke(mOriginInstrumentation, who, contextThread, token,
+            target, intent, requestCode, options);
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    return null;
 }
 ```
 
@@ -72,11 +72,11 @@ return null;
 ```
 @Override
 public Activity newActivity(ClassLoader cl, String className, Intent intent) throws InstantiationException,
-IllegalAccessException, ClassNotFoundException {
-if (!TextUtils.isEmpty(intent.getStringExtra(TARGET_ACTIVITY))) {
-return super.newActivity(cl, intent.getStringExtra(TARGET_ACTIVITY), intent);
-}
-return super.newActivity(cl, className, intent);
+    IllegalAccessException, ClassNotFoundException {
+    if (!TextUtils.isEmpty(intent.getStringExtra(TARGET_ACTIVITY))) {
+        return super.newActivity(cl, intent.getStringExtra(TARGET_ACTIVITY), intent);
+    }
+    return super.newActivity(cl, className, intent);
 }
 ```
 
@@ -84,22 +84,22 @@ return super.newActivity(cl, className, intent);
 
 ```
 private void hookInstrumentation() {
-Context context = getBaseContext();
-try {
-Class contextImplClz = Class.forName("android.app.ContextImpl");
-Field mMainThread = contextImplClz.getDeclaredField("mMainThread");
-mMainThread.setAccessible(true);
-Object activityThread = mMainThread.get(context);
-Class activityThreadClz = Class.forName("android.app.ActivityThread");
-Field mInstrumentationField = activityThreadClz.getDeclaredField("mInstrumentation");
-mInstrumentationField.setAccessible(true);
-mInstrumentationField.set(activityThread,
-new HookInstrumentation((Instrumentation) mInstrumentationField.get(activityThread),
-context.getPackageManager()));
-} catch (Exception e) {
-e.printStackTrace();
-Log.e("plugin", "hookInstrumentation: error");
-}
+    Context context = getBaseContext();
+    try {
+        Class contextImplClz = Class.forName("android.app.ContextImpl");
+        Field mMainThread = contextImplClz.getDeclaredField("mMainThread");
+        mMainThread.setAccessible(true);
+        Object activityThread = mMainThread.get(context);
+        Class activityThreadClz = Class.forName("android.app.ActivityThread");
+        Field mInstrumentationField = activityThreadClz.getDeclaredField("mInstrumentation");
+        mInstrumentationField.setAccessible(true);
+        mInstrumentationField.set(activityThread,
+        new HookInstrumentation((Instrumentation) mInstrumentationField.get(activityThread),
+            context.getPackageManager()));
+    } catch (Exception e) {
+        e.printStackTrace();
+        Log.e("plugin", "hookInstrumentation: error");
+    }
 }
 ```
 
@@ -111,27 +111,27 @@ Log.e("plugin", "hookInstrumentation: error");
 
 ```
 private ComponentName startServiceCommon(Intent service, UserHandle user) {
-try {
-validateServiceIntent(service);
-service.prepareToLeaveProcess(this);
-ComponentName cn = ActivityManagerNative.getDefault().startService(
-mMainThread.getApplicationThread(), service, service.resolveTypeIfNeeded(
-getContentResolver()), getOpPackageName(), user.getIdentifier());
-if (cn != null) {
-if (cn.getPackageName().equals("!")) {
-throw new SecurityException(
-"Not allowed to start service " + service
-+ " without permission " + cn.getClassName());
-} else if (cn.getPackageName().equals("!!")) {
-throw new SecurityException(
-"Unable to start service " + service
-+ ": " + cn.getClassName());
-}
-}
-return cn;
-} catch (RemoteException e) {
-throw e.rethrowFromSystemServer();
-}
+    try {
+        validateServiceIntent(service);
+        service.prepareToLeaveProcess(this);
+        ComponentName cn = ActivityManagerNative.getDefault().startService(
+            mMainThread.getApplicationThread(), service, service.resolveTypeIfNeeded(
+            getContentResolver()), getOpPackageName(), user.getIdentifier());
+        if (cn != null) {
+            if (cn.getPackageName().equals("!")) {
+                throw new SecurityException(
+                    "Not allowed to start service " + service
+                    + " without permission " + cn.getClassName());
+            } else if (cn.getPackageName().equals("!!")) {
+                throw new SecurityException(
+                    "Unable to start service " + service
+                    + ": " + cn.getClassName());
+            }
+        }
+        return cn;
+    } catch (RemoteException e) {
+        throw e.rethrowFromSystemServer();
+    }
 }
 ```
 
@@ -143,23 +143,23 @@ Hook AMS代码如下：
 
 ```
 private void hookAMS() {
-try {
-Class activityManagerNative = Class.forName("android.app.ActivityManagerNative");
-Field gDefaultField = activityManagerNative.getDeclaredField("gDefault");
-gDefaultField.setAccessible(true);
-Object origin = gDefaultField.get(null);
-Class singleton = Class.forName("android.util.Singleton");
-Field mInstanceField = singleton.getDeclaredField("mInstance");
-mInstanceField.setAccessible(true);
-Object originAMN = mInstanceField.get(origin);
-Object proxy = Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
-new Class[]{Class.forName("android.app.IActivityManager")},
-new ActivityManagerProxy(getPackageManager(),originAMN));
-mInstanceField.set(origin, proxy);
-Log.e(TAG, "hookAMS: success" );
-} catch (Exception e) {
-Log.e(TAG, "hookAMS: " + e.getMessage());
-}
+    try {
+        Class activityManagerNative = Class.forName("android.app.ActivityManagerNative");
+        Field gDefaultField = activityManagerNative.getDeclaredField("gDefault");
+        gDefaultField.setAccessible(true);
+        Object origin = gDefaultField.get(null);
+        Class singleton = Class.forName("android.util.Singleton");
+        Field mInstanceField = singleton.getDeclaredField("mInstance");
+        mInstanceField.setAccessible(true);
+        Object originAMN = mInstanceField.get(origin);
+        Object proxy = Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
+            new Class[]{Class.forName("android.app.IActivityManager")},
+            new ActivityManagerProxy(getPackageManager(),originAMN));
+        mInstanceField.set(origin, proxy);
+        Log.e(TAG, "hookAMS: success" );
+    } catch (Exception e) {
+        Log.e(TAG, "hookAMS: " + e.getMessage());
+    }
 }
 ```
 
@@ -168,16 +168,16 @@ Log.e(TAG, "hookAMS: " + e.getMessage());
 ```
 @Override
 public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-if (method.getName().equals("startService")) {
-Intent intent = (Intent) args[1];
-List<ResolveInfo> infos = mPackageManager.queryIntentServices(intent, PackageManager.MATCH_ALL);
-if (infos == null || infos.size() == 0) {
-intent.putExtra(TARGET_SERVICE, intent.getComponent().getClassName());
-intent.setClassName("com.guolei.plugindemo", "com.guolei.plugindemo.StubService");
-}
+    if (method.getName().equals("startService")) {
+        Intent intent = (Intent) args[1];
+        List<ResolveInfo> infos = mPackageManager.queryIntentServices(intent, PackageManager.MATCH_ALL);
+        if (infos == null || infos.size() == 0) {
+            intent.putExtra(TARGET_SERVICE, intent.getComponent().getClassName());
+            intent.setClassName("com.guolei.plugindemo", "com.guolei.plugindemo.StubService");
+        }
 
-}
-return method.invoke(mOrigin, args);
+    }
+    return method.invoke(mOrigin, args);
 }
 ```
 
@@ -187,52 +187,52 @@ return method.invoke(mOrigin, args);
 ```
 @Override
 public int onStartCommand(Intent intent, int flags, int startId) {
-Log.e(TAG, "onStartCommand: stub service ");
-if (intent != null && !TextUtils.isEmpty(intent.getStringExtra(TARGET_SERVICE))) {
-//启动真正的service
-String serviceName = intent.getStringExtra(TARGET_SERVICE);
-try {
-Class activityThreadClz = Class.forName("android.app.ActivityThread");
-Method getActivityThreadMethod = activityThreadClz.getDeclaredMethod("getApplicationThread");
-getActivityThreadMethod.setAccessible(true);
-//获取ActivityThread
-Class contextImplClz = Class.forName("android.app.ContextImpl");
-Field mMainThread = contextImplClz.getDeclaredField("mMainThread");
-mMainThread.setAccessible(true);
-Object activityThread = mMainThread.get(getBaseContext());
-Object applicationThread = getActivityThreadMethod.invoke(activityThread);
-//获取token值
-Class iInterfaceClz = Class.forName("android.os.IInterface");
-Method asBinderMethod = iInterfaceClz.getDeclaredMethod("asBinder");
-asBinderMethod.setAccessible(true);
-Object token = asBinderMethod.invoke(applicationThread);
-//Service的attach方法
-Class serviceClz = Class.forName("android.app.Service");
-Method attachMethod = serviceClz.getDeclaredMethod("attach",
-Context.class, activityThreadClz, String.class, IBinder.class, Application.class, Object.class);
-attachMethod.setAccessible(true);
-Class activityManagerNative = Class.forName("android.app.ActivityManagerNative");
-Field gDefaultField = activityManagerNative.getDeclaredField("gDefault");
-gDefaultField.setAccessible(true);
-Object origin = gDefaultField.get(null);
-Class singleton = Class.forName("android.util.Singleton");
-Field mInstanceField = singleton.getDeclaredField("mInstance");
-mInstanceField.setAccessible(true);
-Object originAMN = mInstanceField.get(origin);
-Service targetService = (Service) Class.forName(serviceName).newInstance();
-attachMethod.invoke(targetService, this, activityThread, intent.getComponent().getClassName(), token,
-getApplication(), originAMN);
-//service的oncreate方法
-Method onCreateMethod = serviceClz.getDeclaredMethod("onCreate");
-onCreateMethod.setAccessible(true);
-onCreateMethod.invoke(targetService);
-targetService.onStartCommand(intent, flags, startId);
-} catch (Exception e) {
-e.printStackTrace();
-Log.e(TAG, "onStartCommand: " + e.getMessage());
-}
-}
-return super.onStartCommand(intent, flags, startId);
+    Log.e(TAG, "onStartCommand: stub service ");
+    if (intent != null && !TextUtils.isEmpty(intent.getStringExtra(TARGET_SERVICE))) {
+    //启动真正的service
+        String serviceName = intent.getStringExtra(TARGET_SERVICE);
+        try {
+            Class activityThreadClz = Class.forName("android.app.ActivityThread");
+            Method getActivityThreadMethod = activityThreadClz.getDeclaredMethod("getApplicationThread");
+            getActivityThreadMethod.setAccessible(true);
+            //获取ActivityThread
+            Class contextImplClz = Class.forName("android.app.ContextImpl");
+            Field mMainThread = contextImplClz.getDeclaredField("mMainThread");
+            mMainThread.setAccessible(true);
+            Object activityThread = mMainThread.get(getBaseContext());
+            Object applicationThread = getActivityThreadMethod.invoke(activityThread);
+            //获取token值
+            Class iInterfaceClz = Class.forName("android.os.IInterface");
+            Method asBinderMethod = iInterfaceClz.getDeclaredMethod("asBinder");
+            asBinderMethod.setAccessible(true);
+            Object token = asBinderMethod.invoke(applicationThread);
+            //Service的attach方法
+            Class serviceClz = Class.forName("android.app.Service");
+            Method attachMethod = serviceClz.getDeclaredMethod("attach",
+                Context.class, activityThreadClz, String.class, IBinder.class, Application.class,           Object.class);
+            attachMethod.setAccessible(true);
+            Class activityManagerNative = Class.forName("android.app.ActivityManagerNative");
+            Field gDefaultField = activityManagerNative.getDeclaredField("gDefault");
+            gDefaultField.setAccessible(true);
+            Object origin = gDefaultField.get(null);
+            Class singleton = Class.forName("android.util.Singleton");
+            Field mInstanceField = singleton.getDeclaredField("mInstance");
+            mInstanceField.setAccessible(true);
+            Object originAMN = mInstanceField.get(origin);
+            Service targetService = (Service) Class.forName(serviceName).newInstance();
+            attachMethod.invoke(targetService, this, activityThread, intent.getComponent().getClassName(),             token,
+                getApplication(), originAMN);
+            //service的oncreate方法
+            Method onCreateMethod = serviceClz.getDeclaredMethod("onCreate");
+            onCreateMethod.setAccessible(true);
+            onCreateMethod.invoke(targetService);
+        targetService.onStartCommand(intent, flags, startId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.e(TAG, "onStartCommand: " + e.getMessage());
+        }
+    }
+    return super.onStartCommand(intent, flags, startId);
 }
 ```
 
@@ -271,16 +271,17 @@ Field providerInfoField = providerClz.getDeclaredField("info");
 providersField.setAccessible(true);
 List<ProviderInfo> providerInfos = new ArrayList<>();
 for (int i = 0; i < providers.size(); i++) {
-ProviderInfo providerInfo = (ProviderInfo) providerInfoField.get(providers.get(i));
-providerInfo.applicationInfo = getApplicationInfo();
-providerInfos.add(providerInfo);
+    ProviderInfo providerInfo = (ProviderInfo) providerInfoField.get(providers.get(i));
+    providerInfo.applicationInfo = getApplicationInfo();
+    providerInfos.add(providerInfo);
 }
 Class contextImplClz = Class.forName("android.app.ContextImpl");
 Field mMainThread = contextImplClz.getDeclaredField("mMainThread");
 mMainThread.setAccessible(true);
 Object activityThread = mMainThread.get(this.getBaseContext());
 Class activityThreadClz = Class.forName("android.app.ActivityThread");
-Method installContentProvidersMethod = activityThreadClz.getDeclaredMethod("installContentProviders", Context.class, List.class);
+Method installContentProvidersMethod = activityThreadClz.getDeclaredMethod("installContentProviders",
+    Context.class, List.class);
 installContentProvidersMethod.setAccessible(true);
 installContentProvidersMethod.invoke(activityThread, this, providerInfos);
 ```
@@ -290,92 +291,96 @@ installContentProvidersMethod.invoke(activityThread, this, providerInfos);
 
 ```
 private void loadClassByHostClassLoader() {
-File apkFile = new File("/sdcard/plugin_1.apk");
-ClassLoader baseClassLoader = this.getClassLoader();
-try {
-Field pathListField = baseClassLoader.getClass().getSuperclass().getDeclaredField("pathList");
-pathListField.setAccessible(true);
-Object pathList = pathListField.get(baseClassLoader);
+    File apkFile = new File("/sdcard/plugin_1.apk");
+    ClassLoader baseClassLoader = this.getClassLoader();
+    try {
+        Field pathListField = baseClassLoader.getClass().getSuperclass().getDeclaredField("pathList");
+        pathListField.setAccessible(true);
+        Object pathList = pathListField.get(baseClassLoader);
 
-Class clz = Class.forName("dalvik.system.DexPathList");
-Field dexElementsField = clz.getDeclaredField("dexElements");
-dexElementsField.setAccessible(true);
-Object[] dexElements = (Object[]) dexElementsField.get(pathList);
+        Class clz = Class.forName("dalvik.system.DexPathList");
+        Field dexElementsField = clz.getDeclaredField("dexElements");
+        dexElementsField.setAccessible(true);
+        Object[] dexElements = (Object[]) dexElementsField.get(pathList);
 
-Class elementClz = dexElements.getClass().getComponentType();
-Object[] newDexElements = (Object[]) Array.newInstance(elementClz, dexElements.length + 1);
-Constructor<?> constructor = elementClz.getConstructor(File.class, boolean.class, File.class, DexFile.class);
-File file = new File(getFilesDir(), "test.dex");
-if (file.exists()) {
-file.delete();
-}
-file.createNewFile();
-Object pluginElement = constructor.newInstance(apkFile, false, apkFile, DexFile.loadDex(apkFile.getCanonicalPath(),
-file.getAbsolutePath(), 0));
-Object[] toAddElementArray = new Object[]{pluginElement};
-System.arraycopy(dexElements, 0, newDexElements, 0, dexElements.length);
-// 插件的那个element复制进去
-System.arraycopy(toAddElementArray, 0, newDexElements, dexElements.length, toAddElementArray.length);
-dexElementsField.set(pathList, newDexElements);
+        Class elementClz = dexElements.getClass().getComponentType();
+        Object[] newDexElements = (Object[]) Array.newInstance(elementClz, dexElements.length + 1);
+        Constructor<?> constructor = elementClz.getConstructor(File.class, boolean.class, File.class,  
+            DexFile.class);
+            File file = new File(getFilesDir(), "test.dex");
+        if (file.exists()) {
+            file.delete();
+        }
+        file.createNewFile();
+        Object pluginElement = constructor.newInstance(apkFile, false, apkFile, 
+            DexFile.loadDex(apkFile.getCanonicalPath(),
+            file.getAbsolutePath(), 0));
+        Object[] toAddElementArray = new Object[]{pluginElement};
+        System.arraycopy(dexElements, 0, newDexElements, 0, dexElements.length);
+        // 插件的那个element复制进去
+        System.arraycopy(toAddElementArray, 0, newDexElements, dexElements.length, toAddElementArray.length);
+        dexElementsField.set(pathList, newDexElements);
 
-AssetManager assetManager = getResources().getAssets();
-Method method = assetManager.getClass().getDeclaredMethod("addAssetPath", String.class);
-method.invoke(assetManager, apkFile.getPath());
+        AssetManager assetManager = getResources().getAssets();
+        Method method = assetManager.getClass().getDeclaredMethod("addAssetPath", String.class);
+        method.invoke(assetManager, apkFile.getPath());
 
-//            PackageInfo packageInfo = getPackageManager().getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_RECEIVERS);
-//            if (packageInfo != null) {
-//                for (ActivityInfo info : packageInfo.receivers) {
-//                    Log.e(TAG, "loadClassByHostClassLoader: " + info.name );
-//
-//                }
-//            }
-Class packageParseClz = Class.forName("android.content.pm.PackageParser");
-Object packageParser = packageParseClz.newInstance();
-Method parseMethod = packageParseClz.getDeclaredMethod("parsePackage", File.class, int.class);
-parseMethod.setAccessible(true);
-Object packageObject = parseMethod.invoke(packageParser, apkFile, 1 << 2);
-Class packageClz = Class.forName("android.content.pm.PackageParser$Package");
-Field receiversField = packageClz.getDeclaredField("receivers");
-receiversField.setAccessible(true);
-ArrayList receives = (ArrayList) receiversField.get(packageObject);
+        //            PackageInfo packageInfo = getPackageManager().getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_RECEIVERS);
+        //            if (packageInfo != null) {
+        //                for (ActivityInfo info : packageInfo.receivers) {
+        //                    Log.e(TAG, "loadClassByHostClassLoader: " + info.name );
+        //
+        //                }
+        //            }
+        Class packageParseClz = Class.forName("android.content.pm.PackageParser");
+        Object packageParser = packageParseClz.newInstance();
+        Method parseMethod = packageParseClz.getDeclaredMethod("parsePackage", File.class, int.class);
+        parseMethod.setAccessible(true);
+        Object packageObject = parseMethod.invoke(packageParser, apkFile, 1 << 2);
+        Class packageClz = Class.forName("android.content.pm.PackageParser$Package");
+        Field receiversField = packageClz.getDeclaredField("receivers");
+        receiversField.setAccessible(true);
+        ArrayList receives = (ArrayList) receiversField.get(packageObject);
 
-Class componentClz = Class.forName("android.content.pm.PackageParser$Component");
-Field intents = componentClz.getDeclaredField("intents");
-intents.setAccessible(true);
-Field classNameField = componentClz.getDeclaredField("className");
-classNameField.setAccessible(true);
-for (int i = 0; i < receives.size(); i++) {
-ArrayList<IntentFilter> intentFilters = (ArrayList<IntentFilter>) intents.get(receives.get(i));
-String className = (String) classNameField.get(receives.get(i));
-registerReceiver((BroadcastReceiver) getClassLoader().loadClass(className).newInstance(), intentFilters.get(0));
-}
+        Class componentClz = Class.forName("android.content.pm.PackageParser$Component");
+        Field intents = componentClz.getDeclaredField("intents");
+        intents.setAccessible(true);
+        Field classNameField = componentClz.getDeclaredField("className");
+        classNameField.setAccessible(true);
+        for (int i = 0; i < receives.size(); i++) {
+            ArrayList<IntentFilter> intentFilters = (ArrayList<IntentFilter>) intents.get(receives.get(i));
+            String className = (String) classNameField.get(receives.get(i));
+            registerReceiver((BroadcastReceiver) getClassLoader().loadClass(className).newInstance(),
+                intentFilters.get(0));
+        }
 
-// 安装ContentProvider
-Field providersField = packageClz.getDeclaredField("providers");
-providersField.setAccessible(true);
-ArrayList providers = (ArrayList) providersField.get(packageObject);
+        // 安装ContentProvider
+        Field providersField = packageClz.getDeclaredField("providers");
+        providersField.setAccessible(true);
+        ArrayList providers = (ArrayList) providersField.get(packageObject);
 
-Class providerClz = Class.forName("android.content.pm.PackageParser$Provider");
-Field providerInfoField = providerClz.getDeclaredField("info");
-providersField.setAccessible(true);
-List<ProviderInfo> providerInfos = new ArrayList<>();
-for (int i = 0; i < providers.size(); i++) {
-ProviderInfo providerInfo = (ProviderInfo) providerInfoField.get(providers.get(i));
-providerInfo.applicationInfo = getApplicationInfo();
-providerInfos.add(providerInfo);
-}
-Class contextImplClz = Class.forName("android.app.ContextImpl");
-Field mMainThread = contextImplClz.getDeclaredField("mMainThread");
-mMainThread.setAccessible(true);
-Object activityThread = mMainThread.get(this.getBaseContext());
-Class activityThreadClz = Class.forName("android.app.ActivityThread");
-Method installContentProvidersMethod = activityThreadClz.getDeclaredMethod("installContentProviders", Context.class, List.class);
-installContentProvidersMethod.setAccessible(true);
-installContentProvidersMethod.invoke(activityThread, this, providerInfos);
-} catch (Exception e) {
-e.printStackTrace();
-Log.e(TAG, "loadClassByHostClassLoader: " + e.getMessage());
-}
+        Class providerClz = Class.forName("android.content.pm.PackageParser$Provider");
+        Field providerInfoField = providerClz.getDeclaredField("info");
+        providersField.setAccessible(true);
+        List<ProviderInfo> providerInfos = new ArrayList<>();
+        for (int i = 0; i < providers.size(); i++) {
+            ProviderInfo providerInfo = (ProviderInfo) providerInfoField.get(providers.get(i));
+            providerInfo.applicationInfo = getApplicationInfo();
+            providerInfos.add(providerInfo);
+        }
+        Class contextImplClz = Class.forName("android.app.ContextImpl");
+        Field mMainThread = contextImplClz.getDeclaredField("mMainThread");
+        mMainThread.setAccessible(true);
+        Object activityThread = mMainThread.get(this.getBaseContext());
+        Class activityThreadClz = Class.forName("android.app.ActivityThread");
+        Method installContentProvidersMethod = activityThreadClz.getDeclaredMethod("installContentProviders",
+            Context.class, List.class);
+        installContentProvidersMethod.setAccessible(true);
+        installContentProvidersMethod.invoke(activityThread, this, providerInfos);
+    } catch (Exception e) {
+        e.printStackTrace();
+        Log.e(TAG, "loadClassByHostClassLoader: " + e.getMessage());
+    }
 }
 ```
 
@@ -426,13 +431,13 @@ ZipEntry zipEntry = zipFile.getEntry("lib/armeabi/libnative-lib.so");
 InputStream inputStream = zipFile.getInputStream(zipEntry);
 File outSoFile = new File(getFilesDir(), "libnative-lib.so");
 if (outSoFile.exists()) {
-outSoFile.delete();
+    outSoFile.delete();
 }
 FileOutputStream outputStream = new FileOutputStream(outSoFile);
 byte[] cache = new byte[2048];
 int count = 0;
 while ((count = inputStream.read(cache)) != -1) {
-outputStream.write(cache, 0, count);
+    outputStream.write(cache, 0, count);
 }
 outputStream.flush();
 outputStream.close();
