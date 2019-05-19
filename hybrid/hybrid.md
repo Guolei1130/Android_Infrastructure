@@ -31,6 +31,9 @@ js调用native有三种方式
 5. WebView请求并行化
 6. 其他待补充
 
+### evaluateJavascript
+
+如果前端返回的是json，那么需要用[StringEscapeUtils.](https://github.com/apache/commons-lang/blob/master/src/main/java/org/apache/commons/lang3/StringEscapeUtils.java) 进行UNESCAPE_JSON操作。但是这个的初始化是一个相当耗时的操作，所以要提前初始化好。
 
 ### 可参考资料
 
