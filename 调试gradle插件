@@ -1,0 +1,15 @@
+### 1 配置remote debug
+```
+export GRADLE_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005" 
+```
+Android Studio中按照如下步骤操作：
+Menu → Run → Edit Configurations... → Add New Configuration → Remote → 自定义配置name → host: localhost → port: 5005 → OK
+### 执行gradle构建任务
+在Terminal中执行需要调试的任务，同时携带-Dorg.gradle.daemon=false -Dorg.gradle.debug=true作为参数，如下：
+./gradlew <任务名> -Dorg.gradle.daemon=false -Dorg.gradle.debug=true
+复制代码之后可以看到Terminal中执行被阻塞，并输出如下：
+$ gradle assembleDebug -Dorg.gradle.daemon=false -Dorg.gradle.debug=true
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/3.3/userguide/gradle_daemon.html.
+> Starting Daemon
+
+
