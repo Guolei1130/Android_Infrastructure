@@ -1,6 +1,6 @@
 ### 前言
 
-在开始研究APM之前，我们需要先了解AspectJ、Native Hook等知识，不了解的同学可以自行查找资料
+在开始研究APM之前，我们需要先了解AspectJ、ASM、Gradle插件、Native Hook等知识，不了解的同学可以自行查找资料
 
 ### 什么是APM、为什么需要APM
 
