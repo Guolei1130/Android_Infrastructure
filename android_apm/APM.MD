@@ -357,8 +357,83 @@ Activity启动前后，GC、内存数据对比，超过阀值报警上传。基�
 
 ### IO
 
+我们可以通过GOT/PLT等hook方式，hook掉open、write、read、close等方法，统计一些东西。可以参考matrix的io模块。
+
 1. 主线程IO
+    并不是所有的主线程io都需要被上报，当主线程的读写时间和读写次数超过阀值之后，就可以上报。
 2. 不合理的buffer
+	close之前，读写数据总量大小/读写次数 可以看做是buffer大小，或者直接hook Libcore.io也行(参考httpdns的实现方式)
+3. 重复读
+	对同一文件多次open、多次读
+4. Closeable对象未关闭
+
+#### Closeable对象未关闭
+>Android 框架提供的 StrictMode 也支持 Closeable Leak Detect ，框架级的监控自然最合适的，所以决定借 StrictMode 东风。 稍微看下 StrictMode 的源码，发现主要依赖一个工具类 dalvik.system.CloseGuard 来实现。这里依然举 FileInputStream 的例子，看怎么发现没有 close 。
+
+>```
+//open
+public FileInputStream(File file)...{
+    ...
+    //CloseGuard
+    guard.open("close");
+    ...
+}
+//close
+public void close()...{
+	...
+    guard.close();
+    ...
+} 
+//finalize
+protected void finalize() throws IOException {
+	...
+    if (guard != null) {
+        guard.warnIfOpen();
+    }
+    ...
+}      
+```
+
+>以上看到， GC 准备回收这个 FileInputStream ，会调用 guard.warnIfOpen 。再看下 guard.warnIfOpen 做了什么, 同时还有 guard.close 和 guard.open 。
+
+```
+public void open(String closer) {
+	...
+    allocationSite = new Throwable(message);
+    ...
+}
+
+public void close() {
+    allocationSite = null;
+}
+
+public void warnIfOpen() {
+    if (allocationSite == null || !ENABLED) {
+        return;
+    }
+    ...
+    REPORTER.report(message, allocationSite);
+}
+```
+>看到这里，就清晰了，warnIfOpen 时如果没 close ，就 REPORTER.report 。
+
+>到这里大概知道 Closeable Leak 怎么实现了，那怎么利用它呢，再看下 REPORTER ：
+
+```
+//静态变量
+private static volatile Reporter REPORTER = new DefaultReporter();
+//接口
+public static interface Reporter {
+        public void report (String message, Throwable allocationSite);
+}
+```
+>看到这里， hook 点非常清晰，把 REPORTER 换掉就行了。找到了 hook 点，那么就容易了：
+
+>利用反射，把 warnIfOpen 那个 ENABLED 值设为 true
+利用动态代理，把 REPORTER 替换成我定义的 proxy
+这时，框架层的代码只要发现 closeable leak 问题就会 report 给 IOCanary 了。当然框架层很多代码都用了 CloseGuard ，就可以发现比如文件资源没 close ， Cursor 没有 close 等等，一下子满足了好多愿望。
+
+具体的代码实现，可以参考Matrix或者OkHttp
 
 ### 网络
 
