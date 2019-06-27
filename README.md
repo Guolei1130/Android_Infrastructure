@@ -3,7 +3,7 @@ Android基础架构相关东西&优秀框架源码分析
 
 ## 优秀框架源码分析列表
 
-[点这里](./优秀框架源码分析⁩/LIST.MD)
+[点这里](https://github.com/Guolei1130/Android_Infrastructure/blob/master/%E4%BC%98%E7%A7%80%E6%A1%86%E6%9E%B6%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90/LIST.MD)
 
 Android中基础架构涉及到的东西也有很多，类似高性能日志、网路优化、网络诊断、APM、网关、Hybrid、存储、埋点、路由等等一系列内容。因此开个repo，记录并学习一下。
 
