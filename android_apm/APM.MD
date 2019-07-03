@@ -370,7 +370,7 @@ Activity启动前后，GC、内存数据对比，超过阀值报警上传。基�
 #### Closeable对象未关闭
 >Android 框架提供的 StrictMode 也支持 Closeable Leak Detect ，框架级的监控自然最合适的，所以决定借 StrictMode 东风。 稍微看下 StrictMode 的源码，发现主要依赖一个工具类 dalvik.system.CloseGuard 来实现。这里依然举 FileInputStream 的例子，看怎么发现没有 close 。
 
->```
+```
 //open
 public FileInputStream(File file)...{
     ...
